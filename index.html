@@ -276,6 +276,27 @@ svg.chart{width:100%;height:auto;display:block}
 .fndcols input[type=color]{width:100%;height:44px;border:1px solid var(--line);border-radius:12px;background:var(--field);padding:3px;cursor:pointer}
 .sec-t{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px}
 @media (max-width:520px){#estado{max-width:78px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.top-r{gap:8px}}
+#jarvis{position:fixed;inset:0;z-index:70;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;background:var(--splash);-webkit-backdrop-filter:blur(26px);backdrop-filter:blur(26px);cursor:pointer;animation:bfade .35s ease}
+#jarvis[hidden]{display:none}
+.orb{position:relative;width:128px;height:128px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff 0,var(--hi) 34%,var(--viol) 70%,rgba(116,97,214,.15) 72%);box-shadow:0 0 70px rgba(110,130,255,.55);animation:orb 2.6s ease-in-out infinite}
+.orb::before,.orb::after{content:"";position:absolute;inset:-2px;border-radius:50%;border:2px solid var(--hi);opacity:0;animation:ring 2.6s ease-out infinite}
+.orb::after{animation-delay:1.3s}
+#jarvis[data-s="escucha"] .orb{animation-duration:1.5s}
+#jarvis[data-s="escucha"] .orb::before,#jarvis[data-s="escucha"] .orb::after{animation-duration:1.5s}
+#jarvis[data-s="piensa"] .orb{animation:spinorb 1.1s linear infinite;background:conic-gradient(from 0deg,var(--hi),var(--viol),#fff,var(--hi));-webkit-mask:radial-gradient(circle,transparent 38%,#000 40%);mask:radial-gradient(circle,transparent 38%,#000 40%)}
+#jarvis[data-s="piensa"] .orb::before,#jarvis[data-s="piensa"] .orb::after{display:none}
+#jarvis[data-s="habla"] .orb{animation:orb .7s ease-in-out infinite}
+@keyframes orb{0%,100%{transform:scale(.94)}50%{transform:scale(1.07)}}
+@keyframes ring{0%{transform:scale(1);opacity:.55}100%{transform:scale(1.9);opacity:0}}
+@keyframes spinorb{to{transform:rotate(360deg)}}
+#jarvis .jt{font:500 12px/1 var(--mono);text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-top:14px}
+#jarvis .jq{font:500 15px/1.4 var(--body);color:var(--muted);max-width:34ch;min-height:20px}
+#jarvis .ja{font:600 clamp(19px,4.6vw,24px)/1.35 var(--display);letter-spacing:-.01em;max-width:34ch;text-wrap:balance;max-height:36vh;overflow:auto}
+#jarvis small{font:500 11px var(--mono);color:var(--muted);margin-top:6px}
+.icon-btn.vz-on{color:var(--hi);border-color:var(--hi);background:var(--accent-soft)}
+.icon-btn.vz-on svg{animation:vzp 1.8s ease-in-out infinite}
+@keyframes vzp{0%,100%{opacity:1}50%{opacity:.45}}
+@media (prefers-reduced-motion:reduce){.orb,.orb::before,.orb::after,.icon-btn.vz-on svg{animation:none!important}}
 body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--scene)}
 .card,.tile,.note-item,.banner,.composer,.bub.a,.dock,.nav{-webkit-backdrop-filter:blur(22px) saturate(1.2);backdrop-filter:blur(22px) saturate(1.2)}
 .card,.tile,.note-item,.composer{box-shadow:var(--shadow)}
@@ -401,6 +422,7 @@ var ICONS={
   stop:'<rect x="6" y="6" width="12" height="12" rx="2"/>',
   up:'<path d="M7 17L17 7M9 7h8v8"/>',
   dl:'<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>',
+  mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
   fondo:'<path d="M12 3a9 9 0 1 0 0 18c1.4 0 2-.9 2-1.8 0-1.2-1-1.4-1-2.5 0-1 .8-1.7 1.8-1.7H17a4 4 0 0 0 4-4C21 6.5 17 3 12 3Z"/><circle cx="7.5" cy="11" r=".8"/><circle cx="10" cy="7.2" r=".8"/><circle cx="14.5" cy="7.2" r=".8"/>',
   card:'<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18M7 15h3"/>',
   wallet:'<path d="M4 7h13a3 3 0 0 1 3 3v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M4 7l11-3v3M16 14h2"/>',
@@ -901,7 +923,7 @@ function contexto(){
   return L.join('\n');
 }
 function instrucciones(){
-  return 'Eres Ninanz Sidekick, el asesor integrado de Ninanz, una app personal para gestionar negocios y finanzas de un freelancer. Responde siempre en español, de forma breve y concreta (unas 180 palabras como máximo, salvo que te pidan más). Usa solo los datos de abajo; si falta algo para responder bien, dilo y pregunta. Da pasos accionables y ordenados por prioridad. Formato: texto simple, listas con guiones, **negrita** solo para cifras clave. No des asesoramiento fiscal ni de inversión regulado; para impuestos recomienda consultar a un gestor.\n\nDATOS ACTUALES DEL USUARIO\n'+contexto();
+  return 'Eres Ninanz Sidekick, el asesor integrado de Ninanz, una app personal para gestionar negocios y finanzas de un freelancer. Responde siempre en español, de forma breve y concreta (unas 180 palabras como máximo, salvo que te pidan más). Usa solo los datos de abajo; si falta algo para responder bien, dilo y pregunta. Da pasos accionables y ordenados por prioridad. Formato: texto simple, listas con guiones, **negrita** solo para cifras clave. No des asesoramiento fiscal ni de inversión regulado; para impuestos recomienda consultar a un gestor.'+webTxt()+'\n\nDATOS ACTUALES DEL USUARIO\n'+contexto();
 }
 function copyErr(e){
   var c=e&&e.code;
@@ -920,7 +942,7 @@ function apiSample(input,o){
     return r.json().catch(function(){return {}}).then(function(j){
       if(!r.ok){throw {code:r.status===401?'need_code':r.status===429?'rate_limited':(r.status===500&&j.error)?'config':'upstream_error',message:j.error||''}}
       if(o&&o.onText)o.onText({text:j.text,delta:j.text});
-      return {text:j.text,truncated:!!j.truncated};
+      return {text:j.text,truncated:!!j.truncated,fuentes:j.fuentes||[]};
     });
   },function(err){
     if(err&&err.name==='AbortError')throw {code:'cancelled',message:''};
@@ -929,6 +951,8 @@ function apiSample(input,o){
 }
 function pintarLive(){var el=$('#live');if(el)el.innerHTML=ui.live?md(ui.live):el.innerHTML}
 function bajarChat(){var c=$('#chat');if(c){var r=c.getBoundingClientRect();window.scrollTo(0,window.scrollY+r.bottom-window.innerHeight+160)}}
+function fuentesTxt(f){return (f&&f.length)?'\n\nFuentes:\n'+f.map(function(x){return '- '+x.t+' ('+x.h+')'}).join('\n'):''}
+function webTxt(){return sample===apiSample?' Tienes búsqueda en internet: úsala cuando la pregunta dependa de información actual o externa (noticias, precios, tendencias, competencia, normativa, herramientas) y di brevemente que la has consultado.':''}
 function preguntar(texto){
   texto=(texto||'').trim();if(!texto||ui.busy||!sample)return;
   ui.tab='ia';S.chat.push({r:'u',x:texto});ui.draft='';ui.busy=true;ui.live='';ui.error='';guardar();render({top:false});bajarChat();
@@ -936,7 +960,7 @@ function preguntar(texto){
   var hist=S.chat.slice(-12).map(function(m){return {role:m.r==='u'?'user':'assistant',content:m.x}});
   while(hist.length&&hist[0].role!=='user')hist.shift();
   sample([{role:'user',content:instrucciones()}].concat(hist),{cache:false,signal:ctl.signal,onText:function(u){ui.live=u.text;pintarLive()}}).then(function(r){
-    S.chat.push({r:'a',x:r.text+(r.truncated?'\n\n(respuesta cortada por longitud)':'')});
+    S.chat.push({r:'a',x:r.text+(r.truncated?'\n\n(respuesta cortada por longitud)':'')+fuentesTxt(r.fuentes)});
   },function(e){
     if(e&&e.code==='cancelled'){if(e.text)S.chat.push({r:'a',x:e.text+'\n\n(respuesta detenida)'})}
     else if(e&&e.code==='need_code'){if(S.chat.length&&S.chat[S.chat.length-1].r==='u')S.chat.pop();ui.draft=texto;ui.error='';ui.sheet={kind:'codigo'}}
@@ -1119,6 +1143,8 @@ var A={
   selBar:function(b){var i=b.dataset.i;ui.sel=Number(i);render();var el=$('.col[data-i="'+i+'"]');if(el)el.focus()},
   informe:function(){abrirHoja({kind:'informe'})},
   fondo:function(){abrirHoja({kind:'fondo'})},
+  voz:function(){VZ.on?apagarVoz():encenderVoz()},
+  vozCerrar:function(){dormir()},
   fondoSel:function(b){S.fondo={t:'preset',id:b.dataset.id};aplicarFondo();guardar();renderHoja()},
   tema:function(b){S.tema=b.dataset.v;if(b.dataset.v==='auto')document.documentElement.removeAttribute('data-theme');aplicarFondo();guardar();renderHoja()},
   cerrar:function(){cerrarHoja()},
@@ -1283,12 +1309,187 @@ document.addEventListener('change',function(e){
   };
   rd.readAsDataURL(fl);
 });
+
+/* ---------- modo voz: "Oye Jawa" ---------- */
+var VZ={on:false,rec:null,corriendo:false,activo:false,hablando:false,pensando:false,inact:null,ov:null};
+var WAKE=/\b(?:oye|oie|hoy|ey|hey|eh)[\s,.]+(?:jawa|java|yawa|jaua|jahua|hawa|chawa|jaba|yava|jagua|guagua|jahuas|javas)\b[\s,.:;!?]*/;
+function vozOk(){return !!(window.SpeechRecognition||window.webkitSpeechRecognition)}
+function nrm(x){return String(x||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9ñ ]/g,' ').replace(/\s+/g,' ').trim()}
+function refrescarVoz(){$$('[data-a="voz"]').forEach(function(b){b.classList.toggle('vz-on',VZ.on);b.setAttribute('aria-pressed',VZ.on?'true':'false')})}
+function ovVoz(){
+  if(VZ.ov)return VZ.ov;
+  var d=document.createElement('div');d.id='jarvis';d.hidden=true;d.setAttribute('role','dialog');d.setAttribute('aria-label','Ninanz Sidekick por voz');d.dataset.a='vozCerrar';
+  d.innerHTML='<div class="orb"></div><div class="jt"></div><div class="jq"></div><div class="ja"></div><small>Toca para cerrar</small>';
+  document.body.appendChild(d);VZ.ov=d;return d;
+}
+function pintaVoz(st,q,a){
+  var d=ovVoz();d.hidden=false;d.dataset.s=st;
+  d.querySelector('.jt').textContent=st==='piensa'?'Pensando…':st==='habla'?'Ninanz Sidekick':'Te escucho';
+  if(q!=null)d.querySelector('.jq').textContent=q;
+  if(a!=null)d.querySelector('.ja').textContent=a;
+}
+function reloj(){clearTimeout(VZ.inact);VZ.inact=setTimeout(function(){if(!VZ.hablando&&!VZ.pensando)dormir()},15000)}
+function dormir(){
+  VZ.activo=false;VZ.pensando=false;clearTimeout(VZ.inact);
+  try{speechSynthesis.cancel()}catch(e){}
+  VZ.hablando=false;if(VZ.ov)VZ.ov.hidden=true;
+  setTimeout(arrancar,200);
+}
+function arrancar(){
+  if(!VZ.on||VZ.corriendo||VZ.hablando||!VZ.rec)return;
+  try{VZ.rec.start();VZ.corriendo=true}catch(e){}
+}
+function crearRec(){
+  var C=window.SpeechRecognition||window.webkitSpeechRecognition,r=new C();
+  r.lang='es-ES';r.continuous=true;r.interimResults=true;r.maxAlternatives=3;
+  r.onresult=function(e){
+    for(var i=e.resultIndex;i<e.results.length;i++){
+      var res=e.results[i];
+      var txt=res[0].transcript;
+      if(!VZ.activo&&!res.isFinal){
+        for(var k=0;k<res.length;k++){if(WAKE.test(res[k].transcript.toLowerCase())){despertar();break}}
+      }
+      if(VZ.activo&&!VZ.hablando&&!VZ.pensando&&!res.isFinal){pintaVoz('escucha',txt,'');reloj()}
+      if(res.isFinal&&!VZ.hablando&&!VZ.pensando){
+        var alt=txt;for(var k2=0;k2<res.length;k2++){if(WAKE.test(res[k2].transcript.toLowerCase())){alt=res[k2].transcript;break}}
+        procesaVoz(alt);
+      }
+    }
+  };
+  r.onend=function(){VZ.corriendo=false;if(VZ.on&&!VZ.hablando)setTimeout(arrancar,300)};
+  r.onerror=function(e){
+    if(e.error==='not-allowed'||e.error==='service-not-allowed'){VZ.on=false;refrescarVoz();if(VZ.manual){aviso('Permite el micrófono en el navegador para hablar con Ninanz Sidekick.')}}
+  };
+  return r;
+}
+function despertar(){
+  if(VZ.activo)return;
+  VZ.activo=true;pintaVoz('escucha','','');reloj();
+}
+function procesaVoz(t){
+  var low=t.toLowerCase(),m=low.match(WAKE),resto=low,orig=t;
+  if(m){var i=m.index+m[0].length;orig=t.slice(i).trim();resto=low.slice(i)}
+  if(!VZ.activo){
+    if(!m)return;
+    despertar();
+    if(nrm(resto).length<3){decir('Dime, señor.');return}
+  }else if(m&&nrm(resto).length<3){decir('Aquí estoy, señor.');return}
+  orden(orig.replace(/[.,;:!?¿¡]+$/,''),nrm(orig));
+}
+function irTab(t,msg){ui.tab=t;ui.error='';cerrarHoja();render({top:true});decir(msg,dormir)}
+function orden(txt,n){
+  reloj();
+  if(!n)return;
+  if(/^(gracias|muchas gracias|eso es todo|nada mas|adios|hasta luego|callate|silencio|descansa|ya esta|vale gracias)\b/.test(n)){decir('A su servicio, señor.',dormir);return}
+  if(/\b(desactiva|apaga|desconecta)\b.*\b(voz|micro|microfono|escucha|jawa)\b/.test(n)){decir('Modo de voz desactivado, señor.',function(){apagarVoz()});return}
+  var mm=n.match(/^(?:ve a|vete a|ir a|abre|abreme|llevame a|muestrame|ensename|pon)(?: la| el| mis| los| las| me)?(?: pantalla de| seccion de| pestana de)? (hoy|inicio|panel|negocios|finanzas|notas|sidekick|chat)/);
+  if(mm){
+    var mp={hoy:'hoy',inicio:'hoy',panel:'hoy',negocios:'negocios',finanzas:'finanzas',notas:'notas',sidekick:'ia',chat:'ia'};
+    irTab(mp[mm[1]],'Abriendo '+mm[1]+', señor.');return;
+  }
+  if(/\b(nuevo|nueva|anade|anadir|apunta|registra|crea)\b.*\b(movimiento|ingreso|gasto)\b/.test(n)){A.nuevoMov();decir('Listo, señor. Rellene el movimiento.',dormir);return}
+  if(/\b(nueva|nuevo|crea|anade)\b.*\bnota\b/.test(n)){A.nuevaNota();decir('Elija una plantilla, señor.',dormir);return}
+  if(/\b(informe|excel|pdf)\b/.test(n)&&/\b(abre|abreme|exporta|saca|genera|dame|descarga|quiero)\b/.test(n)){A.informe();decir('Aquí tiene los informes, señor.',dormir);return}
+  if(/\b(cambia|cambiar|edita|editar|abre)\b.*\bfondo\b/.test(n)){A.fondo();decir('Personalice el fondo a su gusto, señor.',dormir);return}
+  if(/\bque hora es\b|\bme dices la hora\b/.test(n)){var d=new Date();decir('Son las '+d.getHours()+' y '+pad(d.getMinutes())+', señor.');return}
+  if(/\bque (dia|fecha) es\b/.test(n)){decir('Hoy es '+fechaLarga(hoyStr())+', señor.');return}
+  preguntaVoz(txt);
+}
+function vozInstr(){
+  return 'Eres Ninanz Sidekick en modo voz: un asistente al estilo Jarvis, sereno, elegante y con un toque de ingenio. Trata al usuario de "señor". Responde en español hablado, con un máximo de 60 palabras, sin markdown, sin listas, sin emojis ni símbolos: solo frases naturales que se puedan leer en voz alta. Usa solo los datos de abajo; si falta algo, dilo en una frase. Si el usuario quiere hacer algo en la app (abrir negocios, finanzas, notas, un nuevo movimiento o una nota, informes, cambiar el fondo), díselo: puede pedírtelo directamente. No des asesoramiento fiscal regulado.'+webTxt()+'\n\nDATOS ACTUALES DEL USUARIO\n'+contexto();
+}
+function preguntaVoz(txt){
+  if(!sample){decir('La inteligencia artificial no está disponible ahora mismo, señor.');return}
+  VZ.pensando=true;pintaVoz('piensa',txt,'');
+  S.chat.push({r:'u',x:txt});guardar();
+  var hist=S.chat.slice(-12).map(function(m){return {role:m.r==='u'?'user':'assistant',content:m.x}});
+  while(hist.length&&hist[0].role!=='user')hist.shift();
+  sample([{role:'user',content:vozInstr()}].concat(hist),{cache:false}).then(function(r){
+    var t=(r&&r.text||'').trim()||'No tengo nada que añadir, señor.';
+    S.chat.push({r:'a',x:t});if(S.chat.length>40)S.chat=S.chat.slice(-40);guardar();
+    if(ui.tab==='ia'&&!ui.sheet)render({top:false});
+    decir(t);
+  },function(e){
+    if(e&&e.code==='need_code'){
+      if(S.chat.length&&S.chat[S.chat.length-1].r==='u')S.chat.pop();
+      ui.sheet={kind:'codigo'};renderHoja();
+      decir('Necesito el código de acceso, señor. Introdúzcalo en pantalla.',dormir);
+    }else decir('No he podido conectar con la inteligencia artificial, señor.');
+  });
+}
+function elegirVoz(){
+  var vs=[];try{vs=speechSynthesis.getVoices()||[]}catch(e){}
+  var es=vs.filter(function(v){return /^es(-|_|$)/i.test(v.lang)});
+  var pref=es.filter(function(v){return /es[-_]ES/i.test(v.lang)});
+  var pool=pref.length?pref:es;
+  var masc=pool.filter(function(v){return /jorge|diego|pablo|alvaro|enrique|male|google espa/i.test(v.name)});
+  return (masc[0]||pool[0]||null);
+}
+function decir(txt,fin){
+  var limpio=String(txt||'').replace(/\*\*|[#*_`>]/g,'').replace(/^\s*[-•]\s+/gm,'').replace(/\n+/g,'. ').slice(0,700);
+  VZ.pensando=false;VZ.hablando=true;
+  if(VZ.activo||VZ.ov)pintaVoz('habla',null,limpio);
+  try{if(VZ.rec&&VZ.corriendo)VZ.rec.abort()}catch(e){}
+  var hecho=false;
+  function listo(){
+    if(hecho)return;hecho=true;VZ.hablando=false;
+    if(fin){fin();return}
+    if(VZ.activo){pintaVoz('escucha','','');reloj()}
+    setTimeout(arrancar,250);
+  }
+  if(!window.speechSynthesis||!window.SpeechSynthesisUtterance){setTimeout(listo,Math.min(6000,1200+limpio.length*45));return}
+  try{
+    speechSynthesis.cancel();
+    var u=new SpeechSynthesisUtterance(limpio);u.lang='es-ES';u.rate=1.03;u.pitch=.88;
+    var v=elegirVoz();if(v){u.voice=v;u.lang=v.lang}
+    u.onend=listo;u.onerror=listo;
+    speechSynthesis.speak(u);
+    setTimeout(listo,Math.min(30000,2500+limpio.length*90));
+  }catch(e){listo()}
+}
+function encenderVoz(auto){
+  if(!vozOk()){if(!auto)aviso('Este navegador no permite voz. Usa Chrome o Edge.');return}
+  if(!VZ.rec)VZ.rec=crearRec();
+  VZ.manual=!auto;VZ.on=true;try{localStorage.setItem('ninanz-voz','1')}catch(e){}
+  refrescarVoz();arrancar();pantallaEncendida();
+  if(!auto)aviso('Escuchando. Di «Oye Jawa» para llamarme.');
+}
+var wl=null;
+function pantallaEncendida(){
+  try{if(VZ.on&&!document.hidden&&navigator.wakeLock&&!wl){navigator.wakeLock.request('screen').then(function(l){wl=l;l.addEventListener('release',function(){wl=null})},function(){})}}catch(e){}
+}
+function apagarVoz(){
+  VZ.on=false;try{localStorage.setItem('ninanz-voz','0')}catch(e){}
+  clearTimeout(VZ.inact);VZ.activo=false;VZ.pensando=false;VZ.hablando=false;
+  try{speechSynthesis.cancel()}catch(e){}
+  try{if(VZ.rec)VZ.rec.abort()}catch(e){}
+  VZ.corriendo=false;if(VZ.ov)VZ.ov.hidden=true;refrescarVoz();
+}
+(function(){
+  var v=null;try{v=localStorage.getItem('ninanz-voz')}catch(e){}
+  try{if(window.speechSynthesis)speechSynthesis.getVoices()}catch(e){}
+  if(v==='0'||!vozOk())return;
+  /* Como Siri: se activa sola al abrir la app. Si el navegador aún no tiene permiso de micrófono, espera al primer toque. */
+  var esperar=function(){
+    var f=function(){document.removeEventListener('pointerdown',f,true);if(!VZ.on)encenderVoz(true)};
+    document.addEventListener('pointerdown',f,true);
+  };
+  try{
+    navigator.permissions.query({name:'microphone'}).then(function(p){
+      if(p.state==='granted')encenderVoz(true);else if(p.state==='prompt')esperar();
+    },esperar);
+  }catch(e){esperar()}
+  document.addEventListener('visibilitychange',function(){if(!document.hidden&&VZ.on){arrancar();pantallaEncendida()}});
+  setInterval(function(){if(VZ.on&&!VZ.corriendo&&!VZ.hablando&&!document.hidden)arrancar()},4000);
+})();
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&VZ.ov&&!VZ.ov.hidden)dormir()});
 function montarChrome(){
   $('#brand').innerHTML=logoSvg(32)+'<span>Ninanz</span>';
   $('#nav').innerHTML=TABS.map(function(t){return '<button data-a="tab" data-tab="'+t[0]+'">'+ic(t[0])+'<span>'+t[1]+'</span></button>'}).join('');
   $('#estado').insertAdjacentHTML('afterend','<button class="icon-btn" data-a="tab" data-tab="ia" aria-label="Ninanz Sidekick" title="Ninanz Sidekick">'+ic('ia')+'</button>');
+  $('#estado').insertAdjacentHTML('afterend','<button class="icon-btn" data-a="voz" aria-pressed="false" aria-label="Activar voz: Oye Jawa" title="Activar voz: Oye Jawa">'+ic('mic')+'</button>');
   $('#estado').insertAdjacentHTML('afterend','<button class="icon-btn" data-a="fondo" aria-label="Cambiar fondo" title="Cambiar fondo">'+ic('fondo')+'</button>');
-  var dk=[['nuevoMov','','plus','Nuevo movimiento',' primary'],['nuevaNota','','notas','Nueva nota',''],['informe','','dl','Exportar informe',''],['fondo','','fondo','Cambiar fondo',''],['tab','ia','ia','Preguntar a Ninanz Sidekick','']];
+  var dk=[['nuevoMov','','plus','Nuevo movimiento',' primary'],['nuevaNota','','notas','Nueva nota',''],['informe','','dl','Exportar informe',''],['fondo','','fondo','Cambiar fondo',''],['voz','','mic','Voz: Oye Jawa',''],['tab','ia','ia','Preguntar a Ninanz Sidekick','']];
   $('#dock').innerHTML=dk.map(function(d){return '<button class="dk'+d[4]+'" data-a="'+d[0]+'"'+(d[1]?' data-tab="'+d[1]+'"':'')+' aria-label="'+d[3]+'" title="'+d[3]+'">'+ic(d[2])+'</button>'}).join('');
 }
 montarChrome();
