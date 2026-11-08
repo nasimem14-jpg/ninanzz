@@ -1149,10 +1149,10 @@ var A={
   selBar:function(b){var i=b.dataset.i;ui.sel=Number(i);render();var el=$('.col[data-i="'+i+'"]');if(el)el.focus()},
   informe:function(){abrirHoja({kind:'informe'})},
   fondo:function(){abrirHoja({kind:'fondo'})},
-  voz:function(){VZ.on?apagarVoz():encenderVoz()},
+  voz:function(){if(SAF){hablarAhora();return}VZ.on?apagarVoz():encenderVoz()},
   dictar:function(){dictar()},
   hablarT:function(){var on=hablarOn();try{localStorage.setItem('ninanz-hablar',on?'0':'1')}catch(e){}if(on){try{speechSynthesis.cancel()}catch(e){}VZ.hablando=false}else desbloquearVoz();aviso(on?'Respuestas solo en texto.':'Las respuestas se leerán en voz alta.');render({top:false})},
-  vozCerrar:function(){dormir()},
+  vozCerrar:function(){if(SAF&&VZ.ov&&VZ.ov.dataset.s==='quieto'){hablarAhora();return}dormir()},
   fondoSel:function(b){S.fondo={t:'preset',id:b.dataset.id};aplicarFondo();guardar();renderHoja()},
   tema:function(b){S.tema=b.dataset.v;if(b.dataset.v==='auto')document.documentElement.removeAttribute('data-theme');aplicarFondo();guardar();renderHoja()},
   cerrar:function(){cerrarHoja()},
@@ -1319,6 +1319,7 @@ document.addEventListener('change',function(e){
 });
 
 /* ---------- modo voz: "Oye Jawa" ---------- */
+var SAF=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)||(/safari/i.test(navigator.userAgent)&&!/chrome|chromium|crios|android|edg/i.test(navigator.userAgent));
 var VZ={on:false,rec:null,corriendo:false,activo:false,hablando:false,pensando:false,inact:null,ov:null};
 var WAKE=/\b(?:oye|oie|hoy|ey|hey|eh)[\s,.]+(?:jawa|java|yawa|jaua|jahua|hawa|chawa|jaba|yava|jagua|guagua|jahuas|javas)\b[\s,.:;!?]*/;
 function lev(a,b){var m=a.length,n=b.length,d=[],i,j;for(i=0;i<=m;i++){d[i]=[i]}for(j=0;j<=n;j++)d[0][j]=j;for(i=1;i<=m;i++)for(j=1;j<=n;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[m][n]}
@@ -1343,7 +1344,7 @@ function ovVoz(){
 }
 function pintaVoz(st,q,a){
   var d=ovVoz();d.hidden=false;d.dataset.s=st;
-  d.querySelector('.jt').textContent=st==='piensa'?'Pensando…':st==='habla'?'Ninanz Sidekick':'Te escucho';
+  d.querySelector('.jt').textContent=st==='piensa'?'Pensando…':st==='habla'?'Ninanz Sidekick':st==='quieto'?'Toca para hablar':'Te escucho';
   if(q!=null)d.querySelector('.jq').textContent=q;
   if(a!=null)d.querySelector('.ja').textContent=a;
 }
@@ -1360,7 +1361,7 @@ function arrancar(){
 }
 function crearRec(){
   var C=window.SpeechRecognition||window.webkitSpeechRecognition,r=new C();
-  r.lang='es-ES';r.continuous=true;r.interimResults=true;r.maxAlternatives=3;
+  r.lang='es-ES';r.continuous=!SAF;r.interimResults=true;r.maxAlternatives=3;
   r.onresult=function(e){
     for(var i=e.resultIndex;i<e.results.length;i++){
       var res=e.results[i];
@@ -1457,6 +1458,7 @@ function decir(txt,fin){
     if(fin){fin();return}
     if(VZ.activo){pintaVoz('escucha','','');reloj()}
     setTimeout(arrancar,250);
+    if(SAF)setTimeout(function(){if(VZ.activo&&!VZ.corriendo&&!VZ.hablando)pintaVoz('quieto','','Toca la esfera para hablar otra vez')},900);
   }
   if(!window.speechSynthesis||!window.SpeechSynthesisUtterance){setTimeout(listo,Math.min(6000,1200+limpio.length*45));return}
   try{
@@ -1474,7 +1476,7 @@ function desbloquearVoz(){
   if(VZ.desbloq)return;
   try{if(window.speechSynthesis&&window.SpeechSynthesisUtterance){var u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u);VZ.desbloq=true}}catch(e){}
 }
-['pointerdown','keydown','touchstart'].forEach(function(ev){document.addEventListener(ev,desbloquearVoz,true)});
+['pointerdown','keydown','touchstart','touchend','click'].forEach(function(ev){document.addEventListener(ev,desbloquearVoz,true)});
 function dictar(){
   if(!vozOk()){aviso('Este navegador no permite dictado. Usa Chrome o Edge.');return}
   desbloquearVoz();
@@ -1492,6 +1494,17 @@ function dictar(){
   r.onerror=function(e){VZ.dictando=false;if(e.error==='not-allowed'||e.error==='service-not-allowed')aviso('Permite el micrófono en el navegador.');else if(e.error==='no-speech')aviso('No te he oído. Prueba otra vez.')};
   r.onend=function(){VZ.dictando=false;setTimeout(arrancar,300)};
   try{r.start()}catch(e){VZ.dictando=false}
+}
+function hablarAhora(){
+  desbloquearVoz();
+  if(!vozOk()){aviso('Este navegador no permite voz. Prueba con Chrome.');return}
+  if(!VZ.rec)VZ.rec=crearRec();
+  VZ.on=true;VZ.manual=true;refrescarVoz();
+  try{speechSynthesis.cancel()}catch(e){}
+  VZ.hablando=false;VZ.pensando=false;
+  VZ.activo=false;despertar();
+  if(VZ.corriendo){try{VZ.rec.abort()}catch(e){}VZ.corriendo=false}
+  setTimeout(arrancar,150);
 }
 function encenderVoz(auto){
   if(!vozOk()){if(!auto)aviso('Este navegador no permite voz. Usa Chrome o Edge.');return}
@@ -1514,7 +1527,7 @@ function apagarVoz(){
 (function(){
   var v=null;try{v=localStorage.getItem('ninanz-voz')}catch(e){}
   try{if(window.speechSynthesis)speechSynthesis.getVoices()}catch(e){}
-  if(v==='0'||!vozOk())return;
+  if(v==='0'||!vozOk()||SAF)return;
   /* Como Siri: se activa sola al abrir la app. Si el navegador aún no tiene permiso de micrófono, espera al primer toque. */
   var esperar=function(){
     var f=function(){document.removeEventListener('pointerdown',f,true);if(!VZ.on)encenderVoz(true)};
@@ -1533,7 +1546,7 @@ function montarChrome(){
   $('#brand').innerHTML=logoSvg(32)+'<span>Ninanz</span>';
   $('#nav').innerHTML=TABS.map(function(t){return '<button data-a="tab" data-tab="'+t[0]+'">'+ic(t[0])+'<span>'+t[1]+'</span></button>'}).join('');
   $('#estado').insertAdjacentHTML('afterend','<button class="icon-btn" data-a="tab" data-tab="ia" aria-label="Ninanz Sidekick" title="Ninanz Sidekick">'+ic('ia')+'</button>');
-  $('#estado').insertAdjacentHTML('afterend','<button class="icon-btn" data-a="voz" aria-pressed="false" aria-label="Activar voz: Oye Jawa" title="Activar voz: Oye Jawa">'+ic('mic')+'</button>');
+  $('#estado').insertAdjacentHTML('afterend','<button class="icon-btn" data-a="voz" aria-pressed="false" aria-label="Hablar con Ninanz Sidekick" title="Hablar con Ninanz Sidekick">'+ic('mic')+'</button>');
   $('#estado').insertAdjacentHTML('afterend','<button class="icon-btn" data-a="fondo" aria-label="Cambiar fondo" title="Cambiar fondo">'+ic('fondo')+'</button>');
   var dk=[['nuevoMov','','plus','Nuevo movimiento',' primary'],['nuevaNota','','notas','Nueva nota',''],['informe','','dl','Exportar informe',''],['fondo','','fondo','Cambiar fondo',''],['voz','','mic','Voz: Oye Jawa',''],['tab','ia','ia','Preguntar a Ninanz Sidekick','']];
   $('#dock').innerHTML=dk.map(function(d){return '<button class="dk'+d[4]+'" data-a="'+d[0]+'"'+(d[1]?' data-tab="'+d[1]+'"':'')+' aria-label="'+d[3]+'" title="'+d[3]+'">'+ic(d[2])+'</button>'}).join('');
