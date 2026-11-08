@@ -297,6 +297,9 @@ svg.chart{width:100%;height:auto;display:block}
 .icon-btn.vz-on svg{animation:vzp 1.8s ease-in-out infinite}
 @keyframes vzp{0%,100%{opacity:1}50%{opacity:.45}}
 @media (prefers-reduced-motion:reduce){.orb,.orb::before,.orb::after,.icon-btn.vz-on svg{animation:none!important}}
+#vzhear{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(88px + env(safe-area-inset-bottom,0px));max-width:84vw;padding:6px 12px;border-radius:999px;font:500 12px/1.3 var(--mono);background:var(--surface);border:1px solid var(--line);color:var(--muted);z-index:60;pointer-events:none;opacity:0;transition:opacity .25s;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#vzhear.on{opacity:1}
+@media (min-width:860px){#vzhear{bottom:24px}}
 body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--scene)}
 .card,.tile,.note-item,.banner,.composer,.bub.a,.dock,.nav{-webkit-backdrop-filter:blur(22px) saturate(1.2);backdrop-filter:blur(22px) saturate(1.2)}
 .card,.tile,.note-item,.composer{box-shadow:var(--shadow)}
@@ -422,6 +425,7 @@ var ICONS={
   stop:'<rect x="6" y="6" width="12" height="12" rx="2"/>',
   up:'<path d="M7 17L17 7M9 7h8v8"/>',
   dl:'<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>',
+  vol:'<path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/>',
   mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
   fondo:'<path d="M12 3a9 9 0 1 0 0 18c1.4 0 2-.9 2-1.8 0-1.2-1-1.4-1-2.5 0-1 .8-1.7 1.8-1.7H17a4 4 0 0 0 4-4C21 6.5 17 3 12 3Z"/><circle cx="7.5" cy="11" r=".8"/><circle cx="10" cy="7.2" r=".8"/><circle cx="14.5" cy="7.2" r=".8"/>',
   card:'<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18M7 15h3"/>',
@@ -773,6 +777,7 @@ function vistaIA(){
   out+='</div>';
   if(S.chat.length&&!ui.busy)out+='<div><button class="link" data-a="nuevoChat">Empezar conversación nueva</button></div>';
   out+='<form class="composer" data-form="chat"><textarea id="chat-in" rows="1" placeholder="Pregunta a Ninanz Sidekick" aria-label="Tu pregunta" '+(ui.busy?'':'')+'>'+esc(ui.draft)+'</textarea>'+
+    '<button type="button" class="icon-btn" data-a="dictar" aria-label="Hablar" title="Hablar">'+ic('mic')+'</button><button type="button" class="icon-btn" data-a="hablarT" aria-pressed="'+hablarOn()+'" aria-label="Leer respuestas en voz alta" title="Leer respuestas en voz alta">'+ic('vol')+'</button>'+
     (ui.busy?'<button type="button" class="icon-btn" data-a="parar" aria-label="Detener">'+ic('stop')+'</button>':'<button class="icon-btn" style="background:var(--accent);color:var(--accent-ink);border-color:var(--accent)" aria-label="Enviar">'+ic('send')+'</button>')+'</form>';
   return out;
 }
@@ -961,6 +966,7 @@ function preguntar(texto){
   while(hist.length&&hist[0].role!=='user')hist.shift();
   sample([{role:'user',content:instrucciones()}].concat(hist),{cache:false,signal:ctl.signal,onText:function(u){ui.live=u.text;pintarLive()}}).then(function(r){
     S.chat.push({r:'a',x:r.text+(r.truncated?'\n\n(respuesta cortada por longitud)':'')+fuentesTxt(r.fuentes)});
+    if(hablarOn())decir(r.text);
   },function(e){
     if(e&&e.code==='cancelled'){if(e.text)S.chat.push({r:'a',x:e.text+'\n\n(respuesta detenida)'})}
     else if(e&&e.code==='need_code'){if(S.chat.length&&S.chat[S.chat.length-1].r==='u')S.chat.pop();ui.draft=texto;ui.error='';ui.sheet={kind:'codigo'}}
@@ -1144,6 +1150,8 @@ var A={
   informe:function(){abrirHoja({kind:'informe'})},
   fondo:function(){abrirHoja({kind:'fondo'})},
   voz:function(){VZ.on?apagarVoz():encenderVoz()},
+  dictar:function(){dictar()},
+  hablarT:function(){var on=hablarOn();try{localStorage.setItem('ninanz-hablar',on?'0':'1')}catch(e){}if(on){try{speechSynthesis.cancel()}catch(e){}VZ.hablando=false}else desbloquearVoz();aviso(on?'Respuestas solo en texto.':'Las respuestas se leerán en voz alta.');render({top:false})},
   vozCerrar:function(){dormir()},
   fondoSel:function(b){S.fondo={t:'preset',id:b.dataset.id};aplicarFondo();guardar();renderHoja()},
   tema:function(b){S.tema=b.dataset.v;if(b.dataset.v==='auto')document.documentElement.removeAttribute('data-theme');aplicarFondo();guardar();renderHoja()},
@@ -1313,6 +1321,17 @@ document.addEventListener('change',function(e){
 /* ---------- modo voz: "Oye Jawa" ---------- */
 var VZ={on:false,rec:null,corriendo:false,activo:false,hablando:false,pensando:false,inact:null,ov:null};
 var WAKE=/\b(?:oye|oie|hoy|ey|hey|eh)[\s,.]+(?:jawa|java|yawa|jaua|jahua|hawa|chawa|jaba|yava|jagua|guagua|jahuas|javas)\b[\s,.:;!?]*/;
+function lev(a,b){var m=a.length,n=b.length,d=[],i,j;for(i=0;i<=m;i++){d[i]=[i]}for(j=0;j<=n;j++)d[0][j]=j;for(i=1;i<=m;i++)for(j=1;j<=n;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[m][n]}
+function wk(low){
+  var m=low.match(WAKE);if(m)return m;
+  var f=low.match(/\b(?:oye|oie|hoy|ey|hey|eh)[\s,.]+([a-zñáéíóú]{3,7})\b[\s,.:;!?]*/);
+  if(f){var w=nrm(f[1]),d=Math.min(lev(w,'jawa'),lev(w,'java'));if(d<=1||(d<=2&&/^[jyhgl]/.test(w)))return f}
+  return null;
+}
+function oigo(t){
+  var e=document.getElementById('vzhear');if(!e){e=document.createElement('div');e.id='vzhear';e.setAttribute('aria-live','polite');document.body.appendChild(e)}
+  e.textContent=t;e.classList.add('on');clearTimeout(oigo.t);oigo.t=setTimeout(function(){e.classList.remove('on')},2600);
+}
 function vozOk(){return !!(window.SpeechRecognition||window.webkitSpeechRecognition)}
 function nrm(x){return String(x||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9ñ ]/g,' ').replace(/\s+/g,' ').trim()}
 function refrescarVoz(){$$('[data-a="voz"]').forEach(function(b){b.classList.toggle('vz-on',VZ.on);b.setAttribute('aria-pressed',VZ.on?'true':'false')})}
@@ -1336,7 +1355,7 @@ function dormir(){
   setTimeout(arrancar,200);
 }
 function arrancar(){
-  if(!VZ.on||VZ.corriendo||VZ.hablando||!VZ.rec)return;
+  if(!VZ.on||VZ.corriendo||VZ.hablando||VZ.dictando||!VZ.rec)return;
   try{VZ.rec.start();VZ.corriendo=true}catch(e){}
 }
 function crearRec(){
@@ -1346,16 +1365,18 @@ function crearRec(){
     for(var i=e.resultIndex;i<e.results.length;i++){
       var res=e.results[i];
       var txt=res[0].transcript;
+      if(!VZ.activo&&VZ.on&&txt.trim())oigo('Oigo: '+txt.trim());
       if(!VZ.activo&&!res.isFinal){
-        for(var k=0;k<res.length;k++){if(WAKE.test(res[k].transcript.toLowerCase())){despertar();break}}
+        for(var k=0;k<res.length;k++){if(wk(res[k].transcript.toLowerCase())){despertar();break}}
       }
       if(VZ.activo&&!VZ.hablando&&!VZ.pensando&&!res.isFinal){pintaVoz('escucha',txt,'');reloj()}
       if(res.isFinal&&!VZ.hablando&&!VZ.pensando){
-        var alt=txt;for(var k2=0;k2<res.length;k2++){if(WAKE.test(res[k2].transcript.toLowerCase())){alt=res[k2].transcript;break}}
+        var alt=txt;for(var k2=0;k2<res.length;k2++){if(wk(res[k2].transcript.toLowerCase())){alt=res[k2].transcript;break}}
         procesaVoz(alt);
       }
     }
   };
+  r.onstart=function(){if(!VZ.silencio){oigo('Escuchando… di «Oye Jawa»');VZ.silencio=true;setTimeout(function(){VZ.silencio=false},30000)}};
   r.onend=function(){VZ.corriendo=false;if(VZ.on&&!VZ.hablando)setTimeout(arrancar,300)};
   r.onerror=function(e){
     if(e.error==='not-allowed'||e.error==='service-not-allowed'){VZ.on=false;refrescarVoz();if(VZ.manual){aviso('Permite el micrófono en el navegador para hablar con Ninanz Sidekick.')}}
@@ -1367,7 +1388,7 @@ function despertar(){
   VZ.activo=true;pintaVoz('escucha','','');reloj();
 }
 function procesaVoz(t){
-  var low=t.toLowerCase(),m=low.match(WAKE),resto=low,orig=t;
+  var low=t.toLowerCase(),m=wk(low),resto=low,orig=t;
   if(m){var i=m.index+m[0].length;orig=t.slice(i).trim();resto=low.slice(i)}
   if(!VZ.activo){
     if(!m)return;
@@ -1442,10 +1463,35 @@ function decir(txt,fin){
     speechSynthesis.cancel();
     var u=new SpeechSynthesisUtterance(limpio);u.lang='es-ES';u.rate=1.03;u.pitch=.88;
     var v=elegirVoz();if(v){u.voice=v;u.lang=v.lang}
-    u.onend=listo;u.onerror=listo;
+    u.onend=listo;u.onerror=function(ev){if(ev&&ev.error==='not-allowed')aviso('El navegador bloquea la voz: toca la pantalla una vez y vuelve a preguntar.');listo()};
     speechSynthesis.speak(u);
     setTimeout(listo,Math.min(30000,2500+limpio.length*90));
   }catch(e){listo()}
+}
+
+function hablarOn(){try{return localStorage.getItem('ninanz-hablar')!=='0'}catch(e){return true}}
+function desbloquearVoz(){
+  if(VZ.desbloq)return;
+  try{if(window.speechSynthesis&&window.SpeechSynthesisUtterance){var u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u);VZ.desbloq=true}}catch(e){}
+}
+['pointerdown','keydown','touchstart'].forEach(function(ev){document.addEventListener(ev,desbloquearVoz,true)});
+function dictar(){
+  if(!vozOk()){aviso('Este navegador no permite dictado. Usa Chrome o Edge.');return}
+  desbloquearVoz();
+  var C=window.SpeechRecognition||window.webkitSpeechRecognition,r=new C();
+  VZ.dictando=true;try{if(VZ.rec&&VZ.corriendo)VZ.rec.abort()}catch(e){}
+  r.lang='es-ES';r.interimResults=true;r.continuous=false;
+  var ta=document.getElementById('chat-in'),env=false;
+  r.onstart=function(){aviso('Te escucho…')};
+  r.onresult=function(e){
+    var t='',fin=false;
+    for(var i=0;i<e.results.length;i++){t+=e.results[i][0].transcript;if(e.results[i].isFinal)fin=true}
+    ui.draft=t;if(ta)ta.value=t;
+    if(fin&&!env&&t.trim()){env=true;try{r.stop()}catch(x){}preguntar(t.trim())}
+  };
+  r.onerror=function(e){VZ.dictando=false;if(e.error==='not-allowed'||e.error==='service-not-allowed')aviso('Permite el micrófono en el navegador.');else if(e.error==='no-speech')aviso('No te he oído. Prueba otra vez.')};
+  r.onend=function(){VZ.dictando=false;setTimeout(arrancar,300)};
+  try{r.start()}catch(e){VZ.dictando=false}
 }
 function encenderVoz(auto){
   if(!vozOk()){if(!auto)aviso('Este navegador no permite voz. Usa Chrome o Edge.');return}
