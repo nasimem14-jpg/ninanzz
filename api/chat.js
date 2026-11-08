@@ -39,7 +39,9 @@ module.exports = async function handler(req, res) {
   while (clean.length && clean[0].role !== 'user') clean.shift();
   if (!clean.length || clean[clean.length - 1].role !== 'user') return res.status(400).json({ error: 'Mensaje no válido' });
 
-  const web = limpio(process.env.WEB_SEARCH) !== '0';
+  // Modo voz: respuestas cortas y rápidas (modelo ligero, sin búsqueda salvo que se pida).
+  const rapido = body.voz === true && body.web !== true;
+  const web = limpio(process.env.WEB_SEARCH) !== '0' && !rapido;
   const fuentesDe = lista => {
     const vistas = new Set(), out = [];
     for (const f of lista) {
@@ -55,7 +57,7 @@ module.exports = async function handler(req, res) {
 
   try {
     if (openaiKey) {
-      const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+      const model = (rapido && process.env.OPENAI_FAST_MODEL) || process.env.OPENAI_MODEL || 'gpt-4o-mini';
       const headers = { Authorization: 'Bearer ' + openaiKey, 'content-type': 'application/json' };
       let r, j;
       if (web) {
@@ -91,7 +93,7 @@ module.exports = async function handler(req, res) {
       r = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST', headers,
         body: JSON.stringify({
-          model, max_completion_tokens: 1000,
+          model, max_completion_tokens: rapido ? 350 : 1000,
           messages: [{ role: 'system', content: system }].concat(clean),
         }),
       });
@@ -105,15 +107,17 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ text: (ch.message && ch.message.content) || '', truncated: ch.finish_reason === 'length', fuentes: [] });
     }
 
-    const model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5';
+    const modeloPrincipal = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5';
+    let model = rapido ? (process.env.ANTHROPIC_FAST_MODEL || 'claude-haiku-5-5') : modeloPrincipal;
     const headers = { 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' };
     const pedir = conBusqueda => fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST', headers,
-      body: JSON.stringify(Object.assign({ model, max_tokens: conBusqueda ? 1500 : 1000, system, messages: clean },
-        conBusqueda ? { tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 4 }] } : {})),
+      body: JSON.stringify(Object.assign({ model, max_tokens: rapido ? 350 : conBusqueda ? 1500 : 1000, system, messages: clean },
+        conBusqueda ? { tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }] } : {})),
     });
     let r = await pedir(web);
     if (!r.ok && web && r.status === 400) r = await pedir(false);
+    if (!r.ok && rapido && model !== modeloPrincipal && (r.status === 400 || r.status === 404)) { model = modeloPrincipal; r = await pedir(false); }
     const j = await r.json().catch(() => ({}));
     if (!r.ok) {
       if (r.status === 429) return res.status(429).json({ error: 'Límite de uso alcanzado. Prueba más tarde.' });
