@@ -14,3 +14,10 @@ Ninanz Sidekick puede buscar en internet (OpenAI web_search o la búsqueda web d
 
 ## Voz
 Di «Oye Jawa» con la app abierta (Chrome/Edge). Se activa sola al abrir la app; el botón del micrófono la apaga.
+
+## Voz de ElevenLabs
+Para que Ninanz Sidekick hable con una voz de ElevenLabs, añade en Vercel (Settings → Environment Variables) y vuelve a desplegar:
+- `ELEVENLABS_API_KEY`: tu clave de ElevenLabs (obligatoria).
+- `ELEVENLABS_VOICE_ID`: el ID de la voz que quieras (opcional). La voz tiene que estar en «My Voices» de tu cuenta.
+- `ELEVENLABS_MODEL`: opcional; por defecto `eleven_flash_v2_5` (la más rápida).
+Si no hay clave, o falla, usa la voz del navegador.
